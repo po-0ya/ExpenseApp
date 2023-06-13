@@ -13,24 +13,31 @@ description='An app that can manage your daily expenses.',
 epilog='Coded by Cr0\n[https://github.com/po-0ya]')
 
 #classification of arguments
-conflict_group = parser.add_mutually_exclusive_group()
-input_group = parser.add_argument_group('Add Records')
-sort_group = parser.add_argument_group('Sort options')
+#TODO check if can handle conflicts
+show_group = parser.add_argument_group('Show Record')
+input_group = parser.add_argument_group('Add Record')
+sort_group = parser.add_argument_group('Sort Option')
+delete_group = parser.add_argument_group('Remove Record')
 
 #acceptable arguments 
-conflict_group.add_argument('-v','--view',help='Show the records',action='store')
-conflict_group.add_argument('-va','--viewall',help='Show all the records',action='store_true',)
-input_group.add_argument('-a','--add',help='Add a new record',action='store',nargs=2)
+show_group.add_argument('-v','--view',help='Show the records filter by category -v [category]',action='store')
+show_group.add_argument('-va','--viewall',help='Show all the records',action='store_true')
+
+
+input_group.add_argument('-a','--add',help='Add a new record -a [amount] [category]',action='store',nargs=2)
 input_group.add_argument(
     '-m','--message',
-    help='Add a message to your record incase if you wanna describe some information about that record',
+    help='Add a message to your record incase if you wanna describe some information about that record -m [message]',
     action='store',nargs='?',default=None)
+
 sort_group.add_argument(
-    '-s','--sort',help='Sort the output in ascending or descending order',
+    '-s','--sort',help='Sort the output in ascending or descending order -s [asc/desc]',
     action='store',
     choices=['asc','desc'],
     nargs=1,
     )
+
+delete_group.add_argument('-r','--remove',help='Remove a record from database by ID -r [id]',action='store',nargs=1,type=int)
 
 #parse arguments that i define for parser
 args = parser.parse_args()
@@ -99,8 +106,14 @@ def main():
             total , records = api.show()
             print(f'Total expenses : {total:.2f}')
             print(tabulate(records,tablefmt='pretty',headers=cols))
-    except:
-        pass
+
+        #remove the record if it's in database by ID
+        if args.remove:
+            api.delete(args.remove[0])
+            print(f'ID:{args.remove[0]} successfully removed.')
+            
+    except Exception as err:
+        print(err)
     
 #run
 if __name__ == '__main__':

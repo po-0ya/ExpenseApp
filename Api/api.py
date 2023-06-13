@@ -7,7 +7,7 @@ from datetime import datetime
 class SqlConnection:
 
     #give database name
-    def __init__(self,database):
+    def __init__(self, database):
         self.database = database
         self.connection = None
     
@@ -49,7 +49,7 @@ def init():
         )''')
 
 #show the database records if not given category otherwise show all records according to that category
-def show(category=None,sort=False,stype='ASC'):
+def show(category=None, sort=False, stype='ASC'):
     'show records in database'
     with SqlConnection('db/data.db') as c:
         if category and sort == False:
@@ -81,7 +81,7 @@ def show(category=None,sort=False,stype='ASC'):
     return total, records
 
 #add new record in database 
-def add(amount:float,category:str,message:str='') -> None:
+def add(amount:float, category:str, message:str='') -> None:
     'add new record in database'
     with SqlConnection('db/data.db') as c:
         date = datetime.now().strftime('%Y-%m-%d | %H:%M:%S')
@@ -93,3 +93,8 @@ def add(amount:float,category:str,message:str='') -> None:
             :message
         )''',{'amount':amount,'category':category,'date':date,'message':message})
 
+#delete record from database by id
+def delete(Id:int):
+    'delete record by id from database'
+    with SqlConnection('db/data.db') as c:
+        c.execute('DELETE FROM expenses WHERE id = :id',{'id':Id})
