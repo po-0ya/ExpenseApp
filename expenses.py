@@ -1,153 +1,107 @@
 #import needed modules
 from tabulate import tabulate
 from Api import api
-from os import name,system
+from os import name,system,listdir,path,mkdir
 from sys import argv
 import sys
+from argparse import ArgumentParser,Namespace
+import os
 
-# os type for clear CLI
-_osname = name
-if _osname == 'nt':
-    clear = 'cls'
-elif _osname == 'posix':
-    clear = 'clear'
+#define the parser for software
+parser = ArgumentParser(prog='expenses',
+description='An app that can manage your daily expenses.',
+epilog='Coded by Cr0\n[https://github.com/po-0ya]')
 
-#filename, arguments and length of arguments
-_filename = argv[0]
-args = argv
-length = len(args)
+#classification of arguments
+conflict_group = parser.add_mutually_exclusive_group()
+input_group = parser.add_argument_group('Add Records')
+sort_group = parser.add_argument_group('Sort options')
 
-def usage() -> None:
-    'show the usage of the software'
+#acceptable arguments 
+conflict_group.add_argument('-v','--view',help='Show the records',action='store')
+conflict_group.add_argument('-va','--viewall',help='Show all the records',action='store_true',)
+input_group.add_argument('-a','--add',help='Add a new record',action='store',nargs=2)
+input_group.add_argument(
+    '-m','--message',
+    help='Add a message to your record incase if you wanna describe some information about that record',
+    action='store',nargs='?',default=None)
+sort_group.add_argument(
+    '-s','--sort',help='Sort the output in ascending or descending order',
+    action='store',
+    choices=['asc','desc'],
+    nargs=1,
+    )
+
+#parse arguments that i define for parser
+args = parser.parse_args()
+
+#clear commandline
+def clearScreen() -> None:
+    ostype = name
+    if ostype == 'nt':
+        clear = 'cls'
+    elif ostype == 'posix':
+        clear = 'clear'
     system(clear)
-    print(f'''
-This is an application for recording expenses
-Usage:
-    Initialize:
-        Initial switches : -i --init
-        {_filename} -i
-    Add record:
-        Add switches : -a --add
-        {_filename} -a <amount> <category> [<description>]
-    View records:
-        View switches : -v --view
-        {_filename} -v
-        {_filename} -v -s <sort-type[asc,desc]>
-        {_filename} -v --sort <sort-type[asc,desc]>
-        {_filename} -v <category>
-        {_filename} -v <category> <sort[T,F]>
-        {_filename} -v <category> <sort[T,F]> <sort-type[asc,desc]>
-    Help menu:
-        Help switches : -h --help
-        {_filename} -h
-''')
 
 def main():
-    #conditions
+    
+    #check if the db directory is here or create it
+    dbdir = [directory for directory in listdir() if path.isdir(directory)]
+    if 'db' not in dbdir:
+        mkdir('db')
 
-    #if there is no argument exit and show usage
-    if length < 2:
-        try:
-            usage()
-            sys.exit()
-        except SystemExit:
-            print('Exiting the software...')
+    #check if there is database file or not to create fresh one
+    if 'data.db' not in listdir(r'db/'):
+        clearScreen()
+        print('Database Created')
+        api.init() 
 
-    else:
-        #if the argument is i or init build db
-        if args[1] in ['i','--init'] and length == 2:
-            api.init()
+    try:
+    #check if user want to add record with message
+        if args.add != None and args.message != None:
+            print('Record stored')
+            api.add(args.add[0],args.add[1],args.message)
+        #else if user want to add record but no without any description
+        elif args.add and not args.message:
+            print('Record stored')
+            api.add(args.add[0],args.add[1])
 
-        #if argument is a or add, insert next informations to db
-        elif args[1] in ['-a','--add'] and length == 4:
-            try:
-                amount = float(args[2])
-                api.add(amount,args[3])
-            except ValueError as err:
-                print('The amount type should be a NUMBER not string.')
-            
-            #we passed here because we handled it in our api in the sql class
-            #but we should change it soon as possible because this type of exceptions should be handle in api file
-            except:
-                pass
+        #it's just columns for header in tabulate
+        cols = ['ID','Amount','Category','Description','Date']
 
-        #if argument is a or add, insert next informations to db but this one is with description
-        elif args[1] in ['-a','--add'] and length == 5:
-            try:
-                amount = float(args[2])
-                api.add(amount,args[3],args[4])
-            except ValueError as err:
-                print('The amount type should be a NUMBER not string.')
-            
-            #we passed here because we handled it in our api in the sql class
-            #but we should change it soon as possible because this type of exceptions should be handle in api file
-            except:
-                pass
-        
-        #if argument is v or view show the all records
-        elif args[1] in ['-v','--view'] and length == 2:
-            try:
-                total, records = api.show()
-                print('Total Expenses: %.2f'%(total))
-                print(tabulate(records))
-            except:
-                pass
+        #check if user want to see records filtered by a category and sort them
+        if args.view and args.sort != None:
+            if 'asc' in args.sort:
+                total, records = api.show(args.view,sort=True)
+            else:
+                total, records =api.show(args.view,sort=True,stype='DESC')
+            print(f'Total expenses : {total:.2f}')
+            print(tabulate(records,tablefmt='pretty',headers=cols))
 
-        elif args[1] in ['-v','--view'] and length == 4 and args[2].lower() in ['-s','--sort'] and args[3].lower() in ['asc','desc']:
-            try:
-                # breakpoint()
-                sort = True
-                total, records = api.show(None,sort,args[3].upper())
-                print('Total Expenses: %.2f'%(total))
-                print(tabulate(records))
-            except:
-                pass
-        
-        #if argument is v or view and category is given show all records according to that category
-        elif args[1] in ['-v','--view'] and length == 3:
-            try:
-                total, records = api.show(args[2])
-                print('Total Expenses: %.2f'%(total))
-                print(tabulate(records))
-            except:
-                pass
+        #check if user want to see records filtered by a category
+        elif args.view:
+            total, records = api.show(args.view)
+            print(f'Total expenses : {total:.2f}')
+            print(tabulate(records,tablefmt='pretty',headers=cols))
 
-        elif args[1] in ['-v','--view'] and length == 4:
-            try:
-                if args[3].upper() in ['T','TRUE']:
-                    sort = True
-                elif args[3].upper() in ['F','FALSE']:
-                    sort = False
-                else:
-                    print('Type of the sort argument should be bool(T-F).')
-                total, records = api.show(category=args[2],sort=sort)
-                print('Total Expenses: %.2f'%(total))
-                print(tabulate(records))
-            except:
-                pass
+        #check if user want to see all records stored in database with sort format
+        if args.viewall and args.sort != None:
+            if 'asc' in args.sort:
+                total , records = api.show(sort=True)
+            else:
+                total, records = api.show(sort=True,stype='DESC')
+            print(f'Total expenses : {total:.2f}')
+            print(tabulate(records,tablefmt='pretty',headers=cols))
 
-        elif args[1] in ['-v','--view'] and length == 5:
-            try:
-                if args[3].upper() in ['T','TRUE']:
-                    sort = True
-                elif args[3].upper() in ['F','FALSE']:
-                    sort = False
-                else:
-                    print('Type of the sort argument should be bool(T-F).')
-                if args[4].upper() == 'DESC':
-                    sorttype = 'DESC'
-                else:
-                    sorttype = 'ASC'
-                total, records = api.show(args[2],sort,sorttype)
-                print('Total Expenses: %.2f'%(total))
-                print(tabulate(records))
-            except:
-                pass
-
-        #if second argument is not in the list show help menu again
-        elif args[1] in ['-h','--help'] and length == 2:
-            usage()
-
+        #check if user want to see all records stored in database
+        elif args.viewall:
+            total , records = api.show()
+            print(f'Total expenses : {total:.2f}')
+            print(tabulate(records,tablefmt='pretty',headers=cols))
+    except:
+        pass
+    
 #run
 if __name__ == '__main__':
     main()
