@@ -1,4 +1,4 @@
-from os import name
+from os import name,system
 
 #clear the screen
 def clearScreen() -> None:
