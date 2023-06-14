@@ -1,0 +1,21 @@
+[
+    {
+        "amount":3000,
+        "category":"Test",
+        "message":"Test message"
+    },
+    {
+        "amount":200,
+        "category":"Test2",
+        "message":"Test message 2"
+    },
+    {
+        "amount":8000,
+        "category":"Test3",
+        "message":"Test message 3"
+    },
+    {
+        "amount":30000,
+        "category":"Test4"
+    }
+]
